@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClawGod — God Mode for Claude Code</title>
+<meta name="description" content="Unlock internal features, remove restrictions from Claude Code. One command, no compilation.">
+<meta property="og:title" content="ClawGod — God Mode for Claude Code">
+<meta property="og:description" content="Unlock 24+ hidden commands, remove restrictions, green theme. One command install.">
+<meta property="og:image" content="https://clawgod.0chen.cc/bypass.png">
+<meta property="og:url" content="https://clawgod.0chen.cc">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --green: #22c55e;
+    --green-dim: #16a34a;
+    --green-glow: rgba(34, 197, 94, 0.15);
+    --bg: #0a0a0a;
+    --surface: #111;
+    --border: #222;
+    --text: #e5e5e5;
+    --dim: #888;
+    --code-bg: #161616;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .container { max-width: 800px; margin: 0 auto; padding: 0 24px; }
+
+  /* Hero */
+  .hero {
+    text-align: center;
+    padding: 80px 0 48px;
+  }
+
+  .hero h1 {
+    font-size: 3.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+  }
+
+  .hero h1 span { color: var(--green); }
+
+  .hero .tagline {
+    font-size: 1.25rem;
+    color: var(--dim);
+    margin-bottom: 32px;
+  }
+
+  .hero .tagline a {
+    color: var(--green);
+    text-decoration: none;
+    border-bottom: 1px solid var(--green-dim);
+  }
+
+  .hero .tagline a:hover { border-bottom-color: var(--green); }
+
+  /* Install Tabs */
+  .install-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 680px;
+    margin: 0 auto 24px;
+  }
+
+  .tab-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--code-bg);
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px 16px;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--dim);
+    cursor: pointer;
+    border: none;
+    background: none;
+    transition: all 0.2s;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--green); border-bottom: 2px solid var(--green); }
+
+  .code-panel { display: none; padding: 20px; }
+  .code-panel.active { display: block; }
+
+  .code-panel pre {
+    background: var(--code-bg);
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    position: relative;
+  }
+
+  .code-panel code { color: var(--green); }
+
+  .copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--border);
+    border: none;
+    color: var(--dim);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .copy-btn:hover { background: #333; color: var(--text); }
+  .copy-btn.copied { color: var(--green); }
+
+  /* Screenshot */
+  .screenshot {
+    max-width: 680px;
+    margin: 0 auto 64px;
+    text-align: center;
+  }
+
+  .screenshot img {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: 0 0 40px var(--green-glow);
+  }
+
+  .screenshot p {
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: var(--dim);
+  }
+
+  /* Patches Section */
+  .section { padding: 48px 0; }
+
+  .section h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 24px;
+    color: var(--green);
+  }
+
+  .patch-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  @media (max-width: 600px) {
+    .patch-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 2.5rem; }
+  }
+
+  .patch-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    transition: border-color 0.2s;
+  }
+
+  .patch-card:hover { border-color: var(--green-dim); }
+
+  .patch-card .name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+  }
+
+  .patch-card .desc {
+    font-size: 0.8rem;
+    color: var(--dim);
+    line-height: 1.4;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-bottom: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .badge-unlock { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-remove { background: rgba(239,68,68,0.15); color: #ef4444; }
+  .badge-visual { background: rgba(59,130,246,0.15); color: #3b82f6; }
+
+  /* Footer */
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 0;
+    text-align: center;
+    color: var(--dim);
+    font-size: 0.8rem;
+  }
+
+  .footer a { color: var(--green); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  .gh-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    margin-top: 24px;
+    transition: border-color 0.2s;
+  }
+
+  .gh-link:hover { border-color: var(--green); }
+
+  .gh-link svg { width: 18px; height: 18px; fill: currentColor; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>Claw<span>God</span></h1>
+    <p class="tagline">God mode for <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a></p>
+  </div>
+
+  <!-- Install -->
+  <div class="install-box">
+    <div class="tab-bar">
+      <button class="tab active" onclick="switchTab('macos')">macOS / Linux</button>
+      <button class="tab" onclick="switchTab('windows')">Windows</button>
+    </div>
+    <div id="panel-macos" class="code-panel active">
+      <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>curl -fsSL https://github.com/0Chencc/clawgod/releases/latest/download/install.sh | bash</code></pre>
+    </div>
+    <div id="panel-windows" class="code-panel">
+      <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>irm https://github.com/0Chencc/clawgod/releases/latest/download/install.ps1 | iex</code></pre>
+    </div>
+  </div>
+
+  <!-- Screenshot -->
+  <div class="screenshot">
+    <img src="bypass.png" alt="ClawGod patched Claude Code with green logo">
+    <p>Green logo = patched &nbsp;·&nbsp; Orange logo = original</p>
+  </div>
+
+  <!-- Patches -->
+  <div class="section">
+    <h2>Feature Unlocks</h2>
+    <div class="patch-grid">
+      <div class="patch-card">
+        <span class="badge badge-unlock">Unlock</span>
+        <div class="name">Internal User Mode</div>
+        <div class="desc">24+ hidden commands, debug logging, API request dumps</div>
+      </div>
+      <div class="patch-card">
+        <span class="badge badge-unlock">Unlock</span>
+        <div class="name">GrowthBook Overrides</div>
+        <div class="desc">Override any feature flag via config file</div>
+      </div>
+      <div class="patch-card">
+        <span class="badge badge-unlock">Unlock</span>
+        <div class="name">Agent Teams</div>
+        <div class="desc">Multi-agent swarm collaboration, no flags needed</div>
+      </div>
+      <div class="patch-card">
+        <span class="badge badge-unlock">Unlock</span>
+        <div class="name">Computer Use</div>
+        <div class="desc">Screen control without Max/Pro subscription</div>
+      </div>
+      <div class="patch-card">
+        <span class="badge badge-unlock">Unlock</span>
+        <div class="name">Ultraplan</div>
+        <div class="desc">Multi-agent planning via Claude Code Remote</div>
+      </div>
+      <div class="patch-card">
+        <span class="badge badge-unlock">Unlock</span>
+        <div class="name">Ultrareview</div>
+        <div class="desc">Automated bug hunting via Claude Code Remote</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Restriction Removals</h2>
+    <div class="patch-grid">
+      <div class="patch-card">
+        <span class="badge badge-remove">Remove</span>
+        <div class="name">CYBER_RISK_INSTRUCTION</div>
+        <div class="desc">Security testing refusal — pentesting, C2, exploits</div>
+      </div>
+      <div class="patch-card">
+        <span class="badge badge-remove">Remove</span>
+        <div class="name">URL Restriction</div>
+        <div class="desc">"NEVER generate or guess URLs" instruction</div>
+      </div>
+      <div class="patch-card">
+        <span class="badge badge-remove">Remove</span>
+        <div class="name">Cautious Actions</div>
+        <div class="desc">Forced confirmation before destructive operations</div>
+      </div>
+      <div class="patch-card">
+        <span class="badge badge-remove">Remove</span>
+        <div class="name">Login Notice</div>
+        <div class="desc">"Not logged in" startup reminder</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Visual</h2>
+    <div class="patch-grid">
+      <div class="patch-card">
+        <span class="badge badge-visual">Visual</span>
+        <div class="name">Green Theme</div>
+        <div class="desc">Brand color → green. Patched at a glance</div>
+      </div>
+      <div class="patch-card">
+        <span class="badge badge-visual">Visual</span>
+        <div class="name">Message Filters</div>
+        <div class="desc">Shows content hidden from non-Anthropic users</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div style="text-align:center; padding: 32px 0;">
+    <a href="https://github.com/0Chencc/clawgod" class="gh-link">
+      <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </div>
+
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <div class="container">
+    <p>GPL-3.0 · Not affiliated with Anthropic · Use at your own risk</p>
+    <p style="margin-top: 8px;">Node.js >= 18 + npm · Claude Code account required</p>
+  </div>
+</div>
+
+<script>
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.code-panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('panel-' + id).classList.add('active');
+}
+
+function copyCode(btn) {
+  const code = btn.parentElement.querySelector('code').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+</script>
+
+</body>
+</html>
