@@ -58,6 +58,15 @@ claude              # 已 Patch 的 Claude Code
 claude.orig         # 原版未修改版本
 ```
 
+## 开发命令
+
+```bash
+clawgod install               # 安装或更新
+clawgod patch --dry-run       # 测试补丁兼容性
+clawgod patch --revert        # 恢复原始 bundle
+clawgod status                # 查看当前状态
+```
+
 ## 更新
 
 重新运行安装命令，自动获取最新版本并重新应用补丁：

@@ -58,6 +58,15 @@ claude              # Patched Claude Code
 claude.orig         # Original unpatched version
 ```
 
+## Development Commands
+
+```bash
+clawgod install               # Install or update
+clawgod patch --dry-run       # Test patch compatibility
+clawgod patch --revert        # Revert to original bundle
+clawgod status                # Show current status
+```
+
 ## Update
 
 Re-run the installer to get the latest version with patches re-applied:
