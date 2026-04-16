@@ -168,19 +168,22 @@ export function runPatcher({ dryRun = false, verify = false, revert = false } = 
     if (p.unique && relevant.length !== 1) {
       if (relevant.length !== 1) { failed++; continue; }
     }
+    if (verify) {
+      if (relevant.length > 0) { skipped++; continue; }
+      // fall through to zero-match logic for verify mode
+    }
     if (relevant.length === 0) {
       if (p.optional) { skipped++; }
       else { applied++; }
       continue;
     }
-    if (verify) { skipped++; continue; }
 
     let count = 0;
     for (const m of relevant) {
       const replacement = p.replacer(m[0], ...m.slice(1));
       if (replacement !== m[0]) {
         if (!dryRun) {
-          code = code.replace(m[0], replacement);
+          code = code.slice(0, m.index) + replacement + code.slice(m.index + m[0].length);
         }
         count++;
       }

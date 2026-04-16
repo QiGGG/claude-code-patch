@@ -78,10 +78,10 @@ function resolveAlias(name) { return aliases[name] || name; }
 const hasProviderApiKey = !!config.apiKey;
 
 if (hasProviderApiKey) {
-  process.env.ANTHROPIC_API_KEY = config.apiKey;
-  if (config.baseURL) process.env.ANTHROPIC_BASE_URL = config.baseURL;
-  if (config.model) process.env.ANTHROPIC_MODEL = resolveAlias(config.model);
-  if (config.smallModel) process.env.ANTHROPIC_SMALL_FAST_MODEL = resolveAlias(config.smallModel);
+  ${IS_WIN ? 'process.env.ANTHROPIC_API_KEY ??= config.apiKey;' : 'process.env.ANTHROPIC_API_KEY = config.apiKey;'}
+  if (config.baseURL) ${IS_WIN ? 'process.env.ANTHROPIC_BASE_URL ??= config.baseURL;' : 'process.env.ANTHROPIC_BASE_URL = config.baseURL;'}
+  if (config.model) ${IS_WIN ? 'process.env.ANTHROPIC_MODEL ??= resolveAlias(config.model);' : 'process.env.ANTHROPIC_MODEL = resolveAlias(config.model);'}
+  if (config.smallModel) ${IS_WIN ? 'process.env.ANTHROPIC_SMALL_FAST_MODEL ??= resolveAlias(config.smallModel);' : 'process.env.ANTHROPIC_SMALL_FAST_MODEL = resolveAlias(config.smallModel);'}
   ${IS_WIN ? '' : 'process.env.CLAUDE_CONFIG_DIR = clawgodDir;'}
   if (config.baseURL && !/anthropic\\.com/i.test(config.baseURL)) {
     process.env.ANTHROPIC_AUTH_TOKEN ??= config.apiKey;

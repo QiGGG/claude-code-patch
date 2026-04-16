@@ -48,8 +48,8 @@ function findNativeBinary() {
           return entry.full;
         }
       } catch {
-        // If file command unavailable, fall back to size heuristic
-        return entry.full;
+        // If file command unavailable, fall back to size heuristic on next entry
+        continue;
       }
     }
   }
@@ -77,7 +77,7 @@ export function runInstall(args) {
   const nativeBin = findNativeBinary();
   if (nativeBin) {
     try {
-      const outDir = join(CLAWGOD_DIR, 'natives');
+      const outDir = VENDOR_DIR;
       const result = extractNativeModules(nativeBin, outDir);
       if (result.extracted.length > 0) {
         console.log(`[OK] Extracted ${result.extracted.length} native modules from ${nativeBin}`);

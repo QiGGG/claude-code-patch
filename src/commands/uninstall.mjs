@@ -1,7 +1,7 @@
 import { existsSync, renameSync, unlinkSync } from 'fs';
 import {
-  CLAWGOD_DIR, ORIGINAL_CLI, BACKUP_CLI, WRAPPER_CLI,
-  LAUNCHER_PATH, ORIG_LAUNCHER_PATH,
+  CLAWGOD_DIR, VENDOR_DIR, ORIGINAL_CLI, BACKUP_CLI, WRAPPER_CLI,
+  LAUNCHER_PATH, ORIG_LAUNCHER_PATH, CLAWGOD_LAUNCHER_PATH,
 } from '../utils/paths.mjs';
 import { removeIfExists } from '../utils/shell.mjs';
 
@@ -31,10 +31,13 @@ export function runUninstall() {
     removeIfExists(f);
   }
 
-  // Optionally keep node_modules and vendor for faster reinstall,
-  // but remove them to be fully clean
+  // Remove vendor, natives, and CLI launcher
+  removeIfExists(VENDOR_DIR);
+  removeIfExists(CLAWGOD_LAUNCHER_PATH);
+
+  // Optionally keep node_modules for faster reinstall,
+  // but remove it to be fully clean
   removeIfExists(`${CLAWGOD_DIR}/node_modules`);
-  removeIfExists(`${CLAWGOD_DIR}/vendor`);
 
   console.log('[OK] ClawGod uninstalled');
   console.log('  Restart your terminal or run: hash -r');
