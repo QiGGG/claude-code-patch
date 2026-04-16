@@ -59,7 +59,7 @@ New-Item -ItemType Directory -Force -Path $TmpDir | Out-Null
 $ZipUrl = "https://github.com/0Chencc/clawgod/archive/refs/heads/main.zip"
 $ZipPath = Join-Path $TmpDir "clawgod.zip"
 
-if (Test-Path (Join-Path $PWD ".git") -PathType Container) {
+if (Test-Path (Join-Path $PWD ".git")) {
     # Running from repo
     Copy-Item -Recurse -Force "$(Join-Path $PWD 'bin')" $ClawDir
     Copy-Item -Recurse -Force "$(Join-Path $PWD 'src')" $ClawDir
