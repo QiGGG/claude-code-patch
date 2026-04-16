@@ -1,10 +1,11 @@
 import { existsSync, copyFileSync, readFileSync, writeFileSync, renameSync, unlinkSync, readdirSync, statSync } from 'fs';
 import { join, dirname } from 'path';
+import { homedir } from 'os';
 import {
   CLAWGOD_DIR, BIN_DIR, VENDOR_DIR, ORIGINAL_CLI, WRAPPER_CLI,
   LAUNCHER_PATH, ORIG_LAUNCHER_PATH,
 } from '../utils/paths.mjs';
-import { IS_WIN, createLauncherContent, createOrigLauncherContent, getNativeBinarySearchPaths } from '../utils/platform.mjs';
+import { IS_WIN, createLauncherContent, getNativeBinarySearchPaths } from '../utils/platform.mjs';
 import { downloadClaudeCode } from '../core/downloader.mjs';
 import { setupVendor } from '../core/vendor.mjs';
 import { extractNativeModules } from '../core/extractor.mjs';
@@ -53,7 +54,143 @@ function findNativeBinary() {
       }
     }
   }
+
+  // Also check backed-up native binary on Windows
+  if (IS_WIN) {
+    const origExe = join(BIN_DIR, 'claude.orig.exe');
+    if (existsSync(origExe)) {
+      const st = statSync(origExe);
+      if (st.isFile() && st.size > 10 * 1024 * 1024) {
+        return origExe;
+      }
+    }
+  }
+
   return null;
+}
+
+function setupWindowsLauncher() {
+  const claudeExe = join(BIN_DIR, 'claude.exe');
+  const claudeOrigExe = join(BIN_DIR, 'claude.orig.exe');
+  const claudeCmd = join(BIN_DIR, 'claude.cmd');
+
+  // Search multiple locations for original claude
+  const searchLocs = [
+    claudeExe,
+    join(homedir(), '.local', 'share', 'claude', 'versions'),
+    join(process.env.LOCALAPPDATA || '', 'Programs', 'claude-code'),
+  ];
+
+  for (const loc of searchLocs) {
+    if (!existsSync(loc)) continue;
+    const st = statSync(loc);
+    if (st.isFile() && loc.endsWith('.exe')) {
+      if (!existsSync(claudeOrigExe)) {
+        copyFileSync(loc, claudeOrigExe);
+        console.log('[OK] Original claude.exe backed up -> claude.orig.exe');
+      }
+      break;
+    }
+    if (st.isDirectory()) {
+      let exes;
+      try {
+        exes = readdirSync(loc)
+          .map((n) => join(loc, n))
+          .filter((f) => existsSync(f) && statSync(f).isFile() && f.endsWith('.exe'))
+          .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
+      } catch {
+        continue;
+      }
+      if (exes.length > 0 && !existsSync(claudeOrigExe)) {
+        copyFileSync(exes[0], claudeOrigExe);
+        console.log(`[OK] Original claude backed up -> claude.orig.exe (${exes[0]})`);
+      }
+      break;
+    }
+  }
+
+  // Remove or rename existing claude.exe so .cmd takes precedence
+  if (existsSync(claudeExe)) {
+    if (!existsSync(claudeOrigExe)) {
+      renameSync(claudeExe, claudeOrigExe);
+      console.log('[OK] Renamed claude.exe -> claude.orig.exe');
+    } else {
+      try {
+        unlinkSync(claudeExe);
+        console.log('[OK] Removed claude.exe (.cmd now takes priority)');
+      } catch {
+        const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+        renameSync(claudeExe, join(BIN_DIR, `claude.${ts}.exe`));
+      }
+    }
+  }
+
+  // Clean up old timestamped exes
+  try {
+    readdirSync(BIN_DIR)
+      .filter((n) => /^claude\.\d+\.exe$/.test(n))
+      .forEach((n) => unlinkSync(join(BIN_DIR, n)));
+  } catch {}
+
+  // Write .cmd launcher
+  const launcherContent = createLauncherContent(WRAPPER_CLI);
+  writeFileSync(claudeCmd, launcherContent);
+  console.log("[OK] Command 'claude' -> patched");
+
+  // Ensure BinDir is in PATH
+  try {
+    const userPath = runSilent(`powershell -Command "[Environment]::GetEnvironmentVariable('Path', 'User')"`).trim();
+    if (!userPath.includes(BIN_DIR)) {
+      runSilent(`powershell -Command "[Environment]::SetEnvironmentVariable('Path', '${BIN_DIR};${userPath}', 'User')"`);
+      console.log(`[OK] Added ${BIN_DIR} to user PATH`);
+      console.log('  (restart terminal for PATH to take effect)');
+    }
+  } catch {}
+}
+
+function setupUnixLauncher() {
+  // Find existing claude binary
+  let claudeBin = null;
+  try {
+    claudeBin = runSilent('which claude').trim().split('\n')[0];
+  } catch {
+    claudeBin = LAUNCHER_PATH;
+  }
+
+  const claudeDir = dirname(claudeBin);
+
+  // Backup original launcher (preserve symlinks)
+  if (!existsSync(ORIG_LAUNCHER_PATH)) {
+    if (existsSync(claudeBin)) {
+      try {
+        const isSymlink = runSilent(`test -L "${claudeBin}" && readlink "${claudeBin}"`);
+        if (isSymlink) {
+          const target = isSymlink.trim();
+          runSilent(`ln -sf "${target}" "${ORIG_LAUNCHER_PATH}"`);
+          console.log(`[OK] Original claude backed up -> claude.orig (-> ${target})`);
+        } else {
+          copyFileSync(claudeBin, ORIG_LAUNCHER_PATH);
+          console.log('[OK] Original claude backed up -> claude.orig');
+        }
+      } catch {
+        // Fallback to simple copy
+        copyFileSync(claudeBin, ORIG_LAUNCHER_PATH);
+        console.log('[OK] Original claude backed up -> claude.orig');
+      }
+      unlinkSync(claudeBin);
+    }
+  }
+
+  // Write our launcher
+  const launcherContent = createLauncherContent(WRAPPER_CLI);
+  writeFileSync(claudeBin, launcherContent, { mode: 0o755 });
+  console.log(`[OK] Command 'claude' -> patched (${claudeBin})`);
+
+  // Also install to BIN_DIR if different from where claude was found
+  if (claudeDir !== BIN_DIR) {
+    ensureDir(BIN_DIR);
+    writeFileSync(join(BIN_DIR, 'claude'), launcherContent, { mode: 0o755 });
+  }
 }
 
 export function runInstall(args) {
@@ -77,8 +214,7 @@ export function runInstall(args) {
   const nativeBin = findNativeBinary();
   if (nativeBin) {
     try {
-      const outDir = VENDOR_DIR;
-      const result = extractNativeModules(nativeBin, outDir);
+      const result = extractNativeModules(nativeBin, VENDOR_DIR);
       if (result.extracted.length > 0) {
         console.log(`[OK] Extracted ${result.extracted.length} native modules from ${nativeBin}`);
       }
@@ -98,33 +234,10 @@ export function runInstall(args) {
   // 6. Replace claude command
   ensureDir(BIN_DIR);
 
-  // Find existing claude binary
-  let claudeBin = null;
-  try {
-    claudeBin = runSilent(IS_WIN ? 'where claude' : 'which claude').trim().split('\n')[0];
-  } catch {
-    claudeBin = LAUNCHER_PATH;
-  }
-
-  const claudeDir = dirname(claudeBin);
-
-  // Backup original
-  if (!existsSync(ORIG_LAUNCHER_PATH)) {
-    if (existsSync(LAUNCHER_PATH)) {
-      renameSync(LAUNCHER_PATH, ORIG_LAUNCHER_PATH);
-      console.log('[OK] Original claude backed up -> claude.orig');
-    }
-  }
-
-  // Write our launcher
-  const launcherContent = createLauncherContent(WRAPPER_CLI);
-  writeFileSync(LAUNCHER_PATH, launcherContent, { mode: 0o755 });
-  console.log(`[OK] Command 'claude' -> patched (${LAUNCHER_PATH})`);
-
-  // Also install to BIN_DIR if different from where claude was found
-  if (claudeDir !== BIN_DIR) {
-    ensureDir(BIN_DIR);
-    writeFileSync(join(BIN_DIR, IS_WIN ? 'claude.cmd' : 'claude'), launcherContent, { mode: 0o755 });
+  if (IS_WIN) {
+    setupWindowsLauncher();
+  } else {
+    setupUnixLauncher();
   }
 
   // 7. Create default features.json
