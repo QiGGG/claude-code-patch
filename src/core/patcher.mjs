@@ -179,7 +179,8 @@ export function runPatcher({ dryRun = false, verify = false, revert = false } = 
     }
 
     let count = 0;
-    for (const m of relevant) {
+    for (let i = relevant.length - 1; i >= 0; i--) {
+      const m = relevant[i];
       const replacement = p.replacer(m[0], ...m.slice(1));
       if (replacement !== m[0]) {
         if (!dryRun) {
