@@ -4,66 +4,91 @@
 
 ## 项目概述
 
-ClawGod 是对官方 `@anthropic-ai/claude-code` npm 包的运行时补丁工具。它**不是**第三方客户端，而是下载官方 bundle 后，对压缩后的 JS 应用基于正则表达式的补丁，再包装启动器并替换系统的 `claude` 命令。
+ClawGod 是对官方 `@anthropic-ai/claude-code` npm 包的运行时补丁工具。它**不是**第三方客户端，而是下载官方 bundle 后，应用补丁并替换系统的 `claude` 命令。
+
+Claude Code 在 v2.1.114 发生了重大架构变化：从 JS bundle (`cli.js`) 切换为原生编译二进制。ClawGod 已适配这一变化，支持两种工作模式：
+
+| 模式 | 条件 | 完整补丁 | 环境变量注入 |
+|------|------|----------|-------------|
+| **Legacy** | `cli.js` 存在（v2.1.112 及更早） | ✅ | ✅ |
+| **Native** | 仅原生二进制（v2.1.114 及更新） | ❌ 不可用 | ✅ |
+
+Native 模式下，源码级补丁（绿色主题、消息过滤器、内部用户模式等）不可用，但 API 代理、模型别名、GrowthBook 功能标志覆盖仍通过环境变量注入生效。
 
 ## 仓库结构
 
-- `install.sh` — macOS/Linux 的 Bash 安装脚本。这是补丁逻辑和原生模块提取器的主要来源。
-- `install.ps1` — Windows 的 PowerShell 安装脚本。包含补丁器和包装逻辑的副本。**补丁定义在此文件中重复出现**，必须与 `install.sh` 保持同步。
-- `index.html` — 官网落地页 (`clawgod.0chen.cc`)。
-- `bypass.png` — 落地页和 README 使用的截图素材。
-- `README.md` / `README_ZH.md` / `README_JP.md` — 面向用户的文档。
-
-本仓库中没有 `package.json`、构建系统或测试套件。
-
-## 补丁工作原理
-
-1. **下载**：从 npm 安装 `@anthropic-ai/claude-code` 到 `~/.clawgod/node_modules`。
-2. **提取**：将 npm bundle 中的 `cli.js` 复制为 `~/.clawgod/cli.original.js`。
-3. **Vendor 设置**：从 npm bundle 复制 `vendor/`（ripgrep、tree-sitter）。在 macOS/Linux 上，还会通过安装程序内嵌的自定义 Node.js 扫描器解析 Mach-O / ELF / PE 头，从官方 Bun 二进制文件中提取内嵌的原生 `.node` 模块（audio-capture、image-processor、computer-use、url-handler）。
-4. **打补丁**：运行 `patch.js`，对 `cli.original.js` 应用基于正则的替换。补丁设计为版本无关。
-5. **包装**：`cli.js` 是一个薄包装器，设置环境变量（API 密钥、base URL、功能标志），然后执行 `await import('./cli.original.js')`。
-6. **安装**：将系统 `claude` 命令替换为指向 `~/.clawgod/cli.js` 的启动器脚本，并将原始命令备份为 `claude.orig`。
+- `install.sh` — macOS/Linux 引导脚本。验证 Node.js，下载 CLI 源码到 `~/.clawgod/`，创建 `clawgod` 命令，然后运行 `clawgod install`。
+- `install.ps1` — Windows PowerShell 引导脚本。与 `install.sh` 行为一致。
+- `bin/clawgod.mjs` — CLI 入口点。
+- `src/index.mjs` — 参数解析和命令路由。
+- `src/commands/` — CLI 子命令实现：`install.mjs`, `uninstall.mjs`, `patch.mjs`, `status.mjs`。
+- `src/core/` — 核心逻辑模块：
+  - `downloader.mjs` — `npm install` Claude Code，检测架构（Legacy/Native），复制 `cli.js` 或定位原生二进制。
+  - `patcher.mjs` — 对 `cli.original.js` 应用正则补丁。支持 `optional`、`unique`、`selectIndex`、`validate` 标志。
+  - `wrapper.mjs` — 生成 `~/.clawgod/cli.js`。Legacy 模式下 `import()` JS bundle；Native 模式下 `spawnSync()` 原生二进制。
+  - `extractor.mjs` — Mach-O / ELF / PE 解析器，从官方二进制中提取内嵌 `.node` 原生模块。
+  - `vendor.mjs` — 复制 `vendor/`（ripgrep、tree-sitter）到 `~/.clawgod/vendor/`。
+- `src/utils/` — 跨平台工具：`paths.mjs`（路径常量）、`platform.mjs`（平台检测）、`shell.mjs`（进程/FS 辅助）。
+- `package.json` — ESM 项目配置，`bin: { "clawgod": "./bin/clawgod.mjs" }`。
+- `index.html` / `bypass.png` — 官网素材。
+- `README.md` / `README_ZH.md` / `README_JP.md` — 用户文档。
+- `docs/superpowers/` — 设计规范和实现计划（CLI 重构）。
 
 ## 常用开发命令
 
-没有构建或测试运行器。验证更改的方式：
+```bash
+# 首次安装（引导脚本安装 CLI 到 PATH 并运行 install）
+bash install.sh               # macOS/Linux
+.\install.ps1                 # Windows
 
-- **本地测试 Bash 安装脚本**（不支持整体 dry-run，但 patcher 支持）：
-  ```bash
-  bash install.sh
-  ~/.clawgod/patch.js --dry-run
-  ~/.clawgod/patch.js --verify
-  ~/.clawgod/patch.js --revert
-  ```
+# CLI 命令（安装后可用）
+clawgod install               # 安装最新版本（自动检测 Legacy/Native）
+clawgod install --version 2.1.112   # 强制使用 Legacy 版本（完整补丁）
+clawgod install --version 2.1.117   # Native 版本（wrapper-only）
+clawgod patch --dry-run       # 测试补丁兼容性
+clawgod patch --verify        # 检查补丁状态
+clawgod patch --revert        # 回滚补丁
+clawgod uninstall             # 卸载，恢复原始 claude
+clawgod status                # 查看安装状态
+```
 
-- **修改 `install.sh` 后直接测试 patcher**：
-  ```bash
-  bash install.sh
-  node ~/.clawgod/patch.js --dry-run
-  ```
+## 补丁工作原理
 
-- **本地测试 PowerShell 安装脚本**：
-  ```powershell
-  .\install.ps1
-  node $env:USERPROFILE\.clawgod\patch.js --dry-run
-  ```
+### Legacy 模式（完整流程）
 
-- **卸载**：
-  ```bash
-  bash install.sh --uninstall
-  ```
-  ```powershell
-  .\install.ps1 -Uninstall
-  ```
+1. **下载** — `npm install @anthropic-ai/claude-code` 到 `~/.clawgod/node_modules`。
+2. **架构检测** — 检查 `cli.js` 是否存在。存在则进入 Legacy 模式。
+3. **提取** — 复制 `cli.js` → `~/.clawgod/cli.original.js`。
+4. **Vendor 设置** — 复制 `vendor/`。可选：从原生二进制提取 `.node` 模块。
+5. **打补丁** — `patcher.mjs` 对 `cli.original.js` 应用 23 条正则替换。
+6. **包装** — `wrapper.mjs` 生成 `cli.js`，注入环境变量后 `await import('./cli.original.js')`。
+7. **安装启动器** — 替换系统 `claude` 命令，备份原始为 `claude.orig`。
+
+### Native 模式（简化流程）
+
+1. **下载** — 同上。
+2. **架构检测** — `cli.js` 不存在，检测到原生二进制（`bin/claude.exe` 或平台特定包）。
+3. **包装** — `wrapper.mjs` 生成 `cli.js`，注入环境变量后通过 `spawnSync()` 调用原生二进制。
+4. **安装启动器** — 同上。跳过了 patch 和 vendor 步骤。
+
+### 补丁分类
+
+| 类别 | 补丁 | Legacy | Native |
+|------|------|--------|--------|
+| 功能解锁 | USER_TYPE→ant、Agent Teams、Computer Use、Ultraplan、Ultrareview、Voice Mode，111及以后的版本不支持auto mode。 | ✅ | ❌ |
+| GrowthBook | 环境变量覆盖、配置文件覆盖 | ✅ | ✅（通过 `CLAUDE_INTERNAL_FC_OVERRIDES`） |
+| 限制移除 | CYBER_RISK、URL 限制、Cautious Actions、登录提示 | ✅ | ❌ |
+| 视觉 | 绿色主题（RGB/ANSI/Hex/Shimmer） | ✅ | ❌ |
+| 消息过滤 | Attachment bypass、Message list bypass | ✅ | ❌ |
 
 ## 重要架构说明
 
-- **补丁重复**：patcher 代码存在于两个地方 —— `install.sh` 中的 heredoc（约第 600–870 行）和 `install.ps1` 中的内联字符串（约第 611–806 行）。添加或修改补丁时，**两个文件都必须更新**。
-- **原生提取器重复**：`extract-natives.mjs` 逻辑同样在 `install.sh` 和 `install.ps1` 中重复。
-- **包装器差异**：macOS/Linux 的包装器（`install.sh` 中的 `cli.js`）在设置了 provider API key 时，会将 `CLAUDE_CONFIG_DIR` 隔离到 `~/.clawgod`。Windows 的包装器（`install.ps1`）除非被环境变量覆盖，否则保持 `~/.claude` 作为配置目录。
-- **补丁安全性**：每个补丁条目支持 `optional`、`unique`、`selectIndex` 和 `validate` 标志。`optional: true` 表示该补丁在新版本中可能不存在。`unique: true` 要求恰好匹配一次。
-- **功能标志**：安装时会创建默认的 `features.json`，用于启用 agent teams、session memory、auto background agents 和 prompt cache allowlisting。
+- **单一事实来源**：核心逻辑在 `src/core/` 下的独立 ESM 模块中。`install.sh` 和 `install.ps1` 只是引导脚本，负责将 CLI 安装到 PATH。
+- **补丁双向同步**：`install.sh` 和 `install.ps1` 的引导逻辑仍需保持同步（虽然核心逻辑已提取到 CLI 中，但引导脚本本身也存在于两个平台）。
+- **包装器差异**：macOS/Linux 在设置了 provider API key 时隔离 `CLAUDE_CONFIG_DIR` 到 `~/.clawgod`；Windows 保持 `~/.claude`。
+- **补丁安全性**：每个补丁支持 `optional`（不存在不报错）、`unique`（必须唯一匹配）、`selectIndex`（只取第 N 个匹配）、`validate`（上下文验证函数）。
+- **原生模块提取器**：扫描官方 Claude Code 二进制中的 Mach-O / ELF / PE section，提取 `audio-capture`、`image-processor`、`computer-use-input`、`url-handler` 等 `.node` 模块到 `~/.clawgod/vendor/`。这是可选步骤，失败仅警告不中断安装。
+- **版本分界**：v2.1.112 是最后一个包含 `cli.js` 的版本。v2.1.114 起改为原生二进制。
 
 ## 环境要求
 

@@ -1,0 +1,12 @@
+{
+  "name": "clawgod",
+  "version": "1.0.0",
+  "description": "Runtime patches for Claude Code",
+  "type": "module",
+  "bin": {
+    "clawgod": "./bin/clawgod.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
