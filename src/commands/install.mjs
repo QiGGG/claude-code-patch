@@ -23,7 +23,6 @@ function findNativeBinary() {
     } catch {
       continue;
     }
-    // Sort by mtime desc
     const withStats = entries
       .map((name) => {
         const full = join(dir, name);
@@ -40,7 +39,6 @@ function findNativeBinary() {
     for (const entry of withStats) {
       if (!entry.st.isFile() || entry.st.size < 10 * 1024 * 1024) continue;
       if (IS_WIN) {
-        // On Windows, skip file-type validation (PE scanner will handle it)
         return entry.full;
       }
       try {
@@ -49,13 +47,11 @@ function findNativeBinary() {
           return entry.full;
         }
       } catch {
-        // If file command unavailable, fall back to size heuristic on next entry
         continue;
       }
     }
   }
 
-  // Also check backed-up native binary on Windows
   if (IS_WIN) {
     const origExe = join(BIN_DIR, 'claude.orig.exe');
     if (existsSync(origExe)) {
@@ -74,7 +70,6 @@ function setupWindowsLauncher() {
   const claudeOrigExe = join(BIN_DIR, 'claude.orig.exe');
   const claudeCmd = join(BIN_DIR, 'claude.cmd');
 
-  // Search multiple locations for original claude
   const searchLocs = [
     claudeExe,
     join(homedir(), '.local', 'share', 'claude', 'versions'),
@@ -109,7 +104,6 @@ function setupWindowsLauncher() {
     }
   }
 
-  // Remove or rename existing claude.exe so .cmd takes precedence
   if (existsSync(claudeExe)) {
     if (!existsSync(claudeOrigExe)) {
       renameSync(claudeExe, claudeOrigExe);
@@ -125,19 +119,16 @@ function setupWindowsLauncher() {
     }
   }
 
-  // Clean up old timestamped exes
   try {
     readdirSync(BIN_DIR)
       .filter((n) => /^claude\.\d+\.exe$/.test(n))
       .forEach((n) => unlinkSync(join(BIN_DIR, n)));
   } catch {}
 
-  // Write .cmd launcher
   const launcherContent = createLauncherContent(WRAPPER_CLI);
   writeFileSync(claudeCmd, launcherContent);
   console.log("[OK] Command 'claude' -> patched");
 
-  // Ensure BinDir is in PATH
   try {
     const userPath = runSilent(`powershell -Command "[Environment]::GetEnvironmentVariable('Path', 'User')"`).trim();
     if (!userPath.includes(BIN_DIR)) {
@@ -149,7 +140,6 @@ function setupWindowsLauncher() {
 }
 
 function setupUnixLauncher() {
-  // Find existing claude binary
   let claudeBin = null;
   try {
     claudeBin = runSilent('which claude').trim().split('\n')[0];
@@ -159,7 +149,6 @@ function setupUnixLauncher() {
 
   const claudeDir = dirname(claudeBin);
 
-  // Backup original launcher (preserve symlinks)
   if (!existsSync(ORIG_LAUNCHER_PATH)) {
     if (existsSync(claudeBin)) {
       try {
@@ -173,7 +162,6 @@ function setupUnixLauncher() {
           console.log('[OK] Original claude backed up -> claude.orig');
         }
       } catch {
-        // Fallback to simple copy
         copyFileSync(claudeBin, ORIG_LAUNCHER_PATH);
         console.log('[OK] Original claude backed up -> claude.orig');
       }
@@ -181,12 +169,10 @@ function setupUnixLauncher() {
     }
   }
 
-  // Write our launcher
   const launcherContent = createLauncherContent(WRAPPER_CLI);
   writeFileSync(claudeBin, launcherContent, { mode: 0o755 });
   console.log(`[OK] Command 'claude' -> patched (${claudeBin})`);
 
-  // Also install to BIN_DIR if different from where claude was found
   if (claudeDir !== BIN_DIR) {
     ensureDir(BIN_DIR);
     writeFileSync(join(BIN_DIR, 'claude'), launcherContent, { mode: 0o755 });
@@ -194,7 +180,7 @@ function setupUnixLauncher() {
 }
 
 export function runInstall(args) {
-  let version = 'latest';
+  let version = '2.1.112';
   const vIdx = args.indexOf('--version');
   if (vIdx !== -1 && args[vIdx + 1]) {
     version = args[vIdx + 1];
@@ -203,33 +189,49 @@ export function runInstall(args) {
   console.log(`Installing Claude Code @${version} ...`);
 
   // 1. Download
-  const installedVersion = downloadClaudeCode(version);
-  console.log(`[OK] Claude Code v${installedVersion} downloaded`);
+  const { version: installedVersion, mode, binaryPath } = downloadClaudeCode(version);
+  console.log(`[OK] Claude Code v${installedVersion} downloaded (${mode} mode)`);
 
-  // 2. Vendor
-  const vendorOk = setupVendor();
-  if (vendorOk) console.log('[OK] Vendor copied');
+  if (mode === 'legacy') {
+    // ── Legacy Mode: full patch workflow ──────────────────────────
 
-  // 3. Extract native modules
-  const nativeBin = findNativeBinary();
-  if (nativeBin) {
-    try {
-      const result = extractNativeModules(nativeBin, VENDOR_DIR);
-      if (result.extracted.length > 0) {
-        console.log(`[OK] Extracted ${result.extracted.length} native modules from ${nativeBin}`);
+    // 2. Vendor
+    const vendorOk = setupVendor();
+    if (vendorOk) console.log('[OK] Vendor copied');
+
+    // 3. Extract native modules
+    const nativeBin = findNativeBinary();
+    if (nativeBin) {
+      try {
+        const result = extractNativeModules(nativeBin, VENDOR_DIR);
+        if (result.extracted.length > 0) {
+          console.log(`[OK] Extracted ${result.extracted.length} native modules from ${nativeBin}`);
+        }
+      } catch (err) {
+        console.log(`[WARN] Native extraction failed: ${err.message}`);
       }
-    } catch (err) {
-      console.log(`[WARN] Native extraction failed: ${err.message}`);
     }
+
+    // 4. Wrapper
+    generateWrapper('legacy');
+    console.log('[OK] Wrapper created');
+
+    // 5. Patches
+    const patchResult = runPatcher();
+    console.log(`[OK] Patches applied: ${patchResult.applied}`);
+
+  } else {
+    // ── Native Mode: wrapper-only (no patches possible) ──────────
+
+    console.log('[INFO] Native binary detected. Running in wrapper-only mode.');
+    console.log('  - Feature flags, API proxy, and model aliases are still injected via environment variables.');
+    console.log('  - Source-level patches (green theme, message filters, internal user mode) are unavailable.');
+    console.log('  - Consider using --version 2.1.112 or earlier for full patch support.');
+
+    // 4. Wrapper (spawns native binary)
+    generateWrapper('native', binaryPath);
+    console.log('[OK] Wrapper created (native mode)');
   }
-
-  // 4. Wrapper
-  generateWrapper();
-  console.log('[OK] Wrapper created');
-
-  // 5. Patches
-  const patchResult = runPatcher();
-  console.log(`[OK] Patches applied: ${patchResult.applied}`);
 
   // 6. Replace claude command
   ensureDir(BIN_DIR);

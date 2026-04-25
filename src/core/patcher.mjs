@@ -63,9 +63,71 @@ const patches = [
     replacer: (m, fn) => `function ${fn}(){return!0}`,
   },
   {
-    name: 'Auto-mode unlock for third-party API',
+    name: 'Auto-mode unlock for third-party API (legacy)',
     pattern: /let (\w+)=\w+\(\);if\(\1!=="firstParty"\&\&\1!=="anthropicAws"\)return!1;return\/\^claude-\(opus\|sonnet\)-4-6\/\.test\((\w+)\)/g,
     replacer: () => `return!0`,
+    optional: true,
+  },
+  {
+    name: 'Auto-mode unlock for third-party API (universal)',
+    pattern: /let (\w+)=\w+\(\);if\(\1!=="firstParty"\&\&\1!=="anthropicAws"\)return!1(?:;if\(\w+\(\)\)return\/\^claude-opus-4-7\/\.test\(\w+\))?;return\/\^claude-\(opus\|sonnet\)-4-6\/\.test\(\w+\)(?:\|\|\/\^claude-opus-4-7\/\.test\(\w+\))?/g,
+    replacer: () => `return!0`,
+  },
+  {
+    name: 'Auto-mode gate bypass',
+    pattern: /function ([\w$]+)\(\)\{if\(\w+\?\.\w+\(\)\?\?!1\)return!1;if\(\w+\(\)\)return!1;if\(!\w+\(\w+\(\)\)\)return!1;return!0\}/g,
+    replacer: (m, fn) => `function ${fn}(){return!0}`,
+    validate: (match, code) => match.includes('isAutoModeCircuitBroken'),
+  },
+  {
+    name: 'Auto-mode settings bypass',
+    pattern: /function ([\w$]+)\(\)\{let \w+=\w+\(\)\|\|\{\};return \w+\.disableAutoMode==="disable"\|\|\w+\.permissions\?\.disableAutoMode==="disable"\}/g,
+    replacer: (m, fn) => `function ${fn}(){return!1}`,
+    validate: (match, code) => match.includes('disableAutoMode'),
+  },
+  {
+    name: 'Auto-mode reason bypass',
+    pattern: /function ([\w$]+)\(\)\{if\(\w+\(\)\)return"settings";if\(\w+\?\.\w+\(\)\?\?!1\)return"circuit-breaker";if\(!\w+\(\w+\(\)\)\)return"model";return null\}/g,
+    replacer: (m, fn) => `function ${fn}(){return null}`,
+    validate: (match, code) => match.includes('circuit-breaker'),
+  },
+  {
+    name: 'Auto-mode circuit breaker bypass',
+    pattern: /if\(!\(\w+\?\.\w+\(\)\?\?!1\)\)\w+\?\.\w+\(\w+==="disabled"\|\|\w+\)/g,
+    replacer: () => '',
+    validate: (match, code) => match.includes('setAutoModeCircuitBroken'),
+  },
+  {
+    name: 'Auto-mode verify bypass',
+    pattern: /let j=z!=="disabled"\&\&!Y\&\&w/g,
+    replacer: () => 'let j=!0;$=!0',
+  },
+  {
+    name: 'Auto-mode nY7 override',
+    pattern: /function nY7\(q\)\{if\(q==="enabled"\|\|q==="disabled"\|\|q==="opt-in"\)return q;return \w+\}/g,
+    replacer: () => 'function nY7(q){return"enabled"}',
+  },
+  {
+    name: 'Auto-mode c7z override',
+    pattern: /function c7z\(\)\{let q=u8\("tengu_auto_mode_config",\{\}\)\?\.enabled;return q==="enabled"\|\|q==="disabled"\|\|q==="opt-in"\?q:"opt-in"\}/g,
+    replacer: () => 'function c7z(){return"enabled"}',
+  },
+  {
+    name: 'Auto-mode wY7 override (legacy)',
+    pattern: /function wY7\(q\)\{if\(q==="enabled"\|\|q==="disabled"\|\|q==="opt-in"\)return q;return \w+\}/g,
+    replacer: () => 'function wY7(q){return"enabled"}',
+    optional: true,
+  },
+  {
+    name: 'Auto-mode z1z override (legacy)',
+    pattern: /function z1z\(\)\{let q=I8\("tengu_auto_mode_config",\{\}\)\?\.enabled;return q==="enabled"\|\|q==="disabled"\|\|q==="opt-in"\?q:"opt-in"\}/g,
+    replacer: () => 'function z1z(){return"enabled"}',
+    optional: true,
+  },
+  {
+    name: 'Auto-mode default fallback',
+    pattern: /if\(!([\w$]+)\)\1=\{mode:"default",notification:\$\};if\(!\1\)\1=\{mode:"default",notification:\$\}/g,
+    replacer: (m) => m.replace(/mode:"default"/g, 'mode:"auto"'),
   },
   {
     name: 'Logo + brand color -> green (RGB dark)',

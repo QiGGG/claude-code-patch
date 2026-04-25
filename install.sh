@@ -8,7 +8,7 @@ fi
 
 CLAWGOD_DIR="$HOME/.clawgod"
 BIN_DIR="$HOME/.local/bin"
-VERSION="${CLAWGOD_VERSION:-latest}"
+VERSION="${CLAWGOD_VERSION:-2.1.112}"
 
 # Parse args
 while [[ $# -gt 0 ]]; do

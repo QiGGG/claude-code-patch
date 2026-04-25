@@ -23,7 +23,8 @@ function showVersion() {
 }
 
 export async function main() {
-  if (args.includes('--version') || args.includes('-v')) {
+  // Global --version only when no subcommand is given
+  if (!command || command === '--version' || command === '-v') {
     showVersion();
     return;
   }

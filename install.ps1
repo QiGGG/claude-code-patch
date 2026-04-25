@@ -6,7 +6,7 @@
     Installs the ClawGod CLI and delegates to it.
 #>
 param(
-    [string]$Version = "latest",
+    [string]$Version = "2.1.112",
     [switch]$Uninstall
 )
 
