@@ -10,12 +10,12 @@
 
 **macOS / Linux:**
 ```bash
-curl -fsSL https://github.com/0Chencc/clawgod/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/QiGGG/claude-code-patch/releases/latest/download/install.sh | bash
 ```
 
 **Windows (PowerShell):**
 ```powershell
-irm https://github.com/0Chencc/clawgod/releases/latest/download/install.ps1 | iex
+irm https://github.com/QiGGG/claude-code-patch/releases/latest/download/install.ps1 | iex
 ```
 
 Green logo = patched. Orange logo = original.
@@ -73,25 +73,25 @@ Re-run the installer to get the latest version with patches re-applied:
 
 **macOS / Linux:**
 ```bash
-curl -fsSL https://github.com/0Chencc/clawgod/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/QiGGG/claude-code-patch/releases/latest/download/install.sh | bash
 ```
 
 **Windows:**
 ```powershell
-irm https://github.com/0Chencc/clawgod/releases/latest/download/install.ps1 | iex
+irm https://github.com/QiGGG/claude-code-patch/releases/latest/download/install.ps1 | iex
 ```
 
 ## Uninstall
 
 **macOS / Linux:**
 ```bash
-curl -fsSL https://github.com/0Chencc/clawgod/releases/latest/download/install.sh | bash -s -- --uninstall
+curl -fsSL https://github.com/QiGGG/claude-code-patch/releases/latest/download/install.sh | bash -s -- --uninstall
 hash -r  # refresh shell cache
 ```
 
 **Windows:**
 ```powershell
-irm https://github.com/0Chencc/clawgod/releases/latest/download/install.ps1 -OutFile install.ps1; .\install.ps1 -Uninstall
+irm https://github.com/QiGGG/claude-code-patch/releases/latest/download/install.ps1 -OutFile install.ps1; .\install.ps1 -Uninstall
 ```
 
 > After install or uninstall, restart your terminal or run `hash -r` if the command doesn't take effect immediately.
