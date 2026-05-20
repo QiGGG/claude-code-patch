@@ -56,7 +56,7 @@ $TmpDir = Join-Path $env:TEMP ([System.Guid]::NewGuid().ToString())
 New-Item -ItemType Directory -Force -Path $TmpDir | Out-Null
 
 # Download latest source
-$ZipUrl = "https://github.com/0Chencc/clawgod/archive/refs/heads/main.zip"
+$ZipUrl = "https://github.com/QiGGG/claude-code-patch/archive/refs/heads/main.zip"
 $ZipPath = Join-Path $TmpDir "clawgod.zip"
 
 if (Test-Path (Join-Path $PWD ".git")) {
@@ -67,9 +67,10 @@ if (Test-Path (Join-Path $PWD ".git")) {
 } else {
     Invoke-WebRequest -Uri $ZipUrl -OutFile $ZipPath -UseBasicParsing
     Expand-Archive -Path $ZipPath -DestinationPath $TmpDir -Force
-    Copy-Item -Recurse -Force "$(Join-Path $TmpDir 'clawgod-main\bin')" $ClawDir
-    Copy-Item -Recurse -Force "$(Join-Path $TmpDir 'clawgod-main\src')" $ClawDir
-    Copy-Item -Force "$(Join-Path $TmpDir 'clawgod-main\package.json')" $ClawDir
+    $ExtractedDir = Get-ChildItem -Path $TmpDir -Directory | Select-Object -First 1
+    Copy-Item -Recurse -Force "$(Join-Path $ExtractedDir.FullName 'bin')" $ClawDir
+    Copy-Item -Recurse -Force "$(Join-Path $ExtractedDir.FullName 'src')" $ClawDir
+    Copy-Item -Force "$(Join-Path $ExtractedDir.FullName 'package.json')" $ClawDir
 }
 
 Remove-Item -Recurse -Force $TmpDir

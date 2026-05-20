@@ -63,11 +63,11 @@ if git rev-parse --git-dir &>/dev/null; then
 else
   # Remote install: fetch latest release tarball
   curl -fsSL -o "$TMP_DIR/clawgod.tar.gz" \
-    "https://github.com/0Chencc/clawgod/archive/refs/heads/main.tar.gz"
+    "https://github.com/QiGGG/claude-code-patch/archive/refs/heads/main.tar.gz"
   tar -xzf "$TMP_DIR/clawgod.tar.gz" -C "$TMP_DIR"
-  cp -R "$TMP_DIR/clawgod-main/bin" "$CLAWGOD_DIR/"
-  cp -R "$TMP_DIR/clawgod-main/src" "$CLAWGOD_DIR/"
-  cp "$TMP_DIR/clawgod-main/package.json" "$CLAWGOD_DIR/"
+  cp -R "$TMP_DIR"/*/bin "$CLAWGOD_DIR/"
+  cp -R "$TMP_DIR"/*/src "$CLAWGOD_DIR/"
+  cp "$TMP_DIR"/*/package.json "$CLAWGOD_DIR/"
 fi
 rm -rf "$TMP_DIR"
 

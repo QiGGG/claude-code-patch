@@ -10,12 +10,12 @@
 
 **macOS / Linux:**
 ```bash
-curl -fsSL https://github.com/0Chencc/clawgod/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/QiGGG/claude-code-patch/releases/latest/download/install.sh | bash
 ```
 
 **Windows (PowerShell):**
 ```powershell
-irm https://github.com/0Chencc/clawgod/releases/latest/download/install.ps1 | iex
+irm https://github.com/QiGGG/claude-code-patch/releases/latest/download/install.ps1 | iex
 ```
 
 绿色 Logo = 已 Patch。橙色 Logo = 原版。
@@ -73,25 +73,25 @@ clawgod status                # 查看当前状态
 
 **macOS / Linux:**
 ```bash
-curl -fsSL https://github.com/0Chencc/clawgod/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/QiGGG/claude-code-patch/releases/latest/download/install.sh | bash
 ```
 
 **Windows:**
 ```powershell
-irm https://github.com/0Chencc/clawgod/releases/latest/download/install.ps1 | iex
+irm https://github.com/QiGGG/claude-code-patch/releases/latest/download/install.ps1 | iex
 ```
 
 ## 卸载
 
 **macOS / Linux:**
 ```bash
-curl -fsSL https://github.com/0Chencc/clawgod/releases/latest/download/install.sh | bash -s -- --uninstall
+curl -fsSL https://github.com/QiGGG/claude-code-patch/releases/latest/download/install.sh | bash -s -- --uninstall
 hash -r  # 刷新 shell 缓存
 ```
 
 **Windows:**
 ```powershell
-irm https://github.com/0Chencc/clawgod/releases/latest/download/install.ps1 -OutFile install.ps1; .\install.ps1 -Uninstall
+irm https://github.com/QiGGG/claude-code-patch/releases/latest/download/install.ps1 -OutFile install.ps1; .\install.ps1 -Uninstall
 ```
 
 > 安装或卸载后，如果命令未立即生效，请重启终端或执行 `hash -r`。
